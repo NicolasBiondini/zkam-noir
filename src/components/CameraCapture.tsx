@@ -34,7 +34,7 @@ const CameraCapture: React.FC = () => {
   };
 
   const takePhoto = () => {
-    const size = 300; // Size for the square photo
+    const size = 100; // Size for the square photo
 
     const video = videoRef.current;
 

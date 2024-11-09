@@ -42,7 +42,10 @@ function DialogPhoto({
           generateRandomNumbers(sign)
             .then((randomNumbers) => {
               if (!photoData) return;
-              console.log("primera imagen hash: ", generateHash(photoData, []));
+              console.log(
+                "primera imagen hash: ",
+                generateHash(photoData, randomNumbers)
+              );
               console.log(randomNumbers);
               // TODO: add algo to change image
               const newPhoto = processImage(photoData, randomNumbers);
@@ -62,8 +65,8 @@ function DialogPhoto({
   };
 
   const handleDownload = () => {
-    const width = 300;
-    const height = 300;
+    const width = 100;
+    const height = 100;
 
     // Create canvas
     const canvas = document.createElement("canvas");
