@@ -8,13 +8,35 @@ import { ImageHashProcessor } from "@/helpers/ImageHashProcessor";
 import circuit from "@/../circuits/target/circuits.json";
 import { CompiledCircuit, Noir } from "@noir-lang/noir_js";
 import { BarretenbergBackend } from "@noir-lang/backend_barretenberg";
+import { useToast } from "@/hooks/use-toast";
+import { useAppState } from "@/data/storage";
 
 function UploadImageContainer() {
   const { address } = useAccount();
   const { signMessageAsync } = useSignMessage();
   const [images, setImages] = useState<ImageListType>([]);
+  const [txStatus, setTxStatus] = useState<
+    "initial" | "signing" | "witness" | "proof" | "success" | "error"
+  >("initial");
+  const { proof: stateProof, setProof } = useAppState();
+
   const maxNumber = 1;
 
+  const { toast } = useToast();
+
+  const copyProof = () => {
+    navigator.clipboard.writeText(JSON.stringify(stateProof));
+    toast({
+      title: "Proof copied 📄",
+      description: "The proof has been copied to your clipboard",
+    });
+  };
+
+  const getButtonText = () => {
+    if (txStatus === "initial") return "Verify Image 🔒";
+    if (txStatus === "success") return "Copy Proof 📄";
+    return "Pending";
+  };
   const onChange = (imageList: ImageListType) => {
     if (imageList.length > 0) {
       const img = new Image();
@@ -34,7 +56,7 @@ function UploadImageContainer() {
 
   const verifyImage = async () => {
     if (!images.length || !address) return;
-
+    setTxStatus("signing");
     try {
       // Crear un canvas de 100x100
       const canvas = document.createElement("canvas");
@@ -63,6 +85,10 @@ function UploadImageContainer() {
 
       try {
         // Usar signMessageAsync directamente
+        toast({
+          title: "Signing message ✍️",
+          description: "Please sign the message to continue",
+        });
         const signature = await signMessageAsync({
           message: address,
         });
@@ -74,7 +100,10 @@ function UploadImageContainer() {
         const randomNumbers = new RandInt(256, 0, 10000, seed).generate();
         console.log("Random numbers:", randomNumbers);
 
-        const hash = new ImageHashProcessor(imageData.data, randomNumbers).extractHashFromImage();
+        const hash = new ImageHashProcessor(
+          imageData.data,
+          randomNumbers
+        ).extractHashFromImage();
         console.log("Hash:", hash);
 
         const input = {
@@ -88,22 +117,44 @@ function UploadImageContainer() {
 
         noir.init();
         const { witness } = await noir.execute(input);
-
+        toast({
+          title: "Generating witness 🧑‍💻",
+          description: "Please wait while we generate the witness",
+        });
+        setTxStatus("witness");
         console.log("Witness:", witness);
 
         const barretenbergBackend = new BarretenbergBackend(
           circuit as CompiledCircuit,
           { threads: navigator.hardwareConcurrency }
         );
+        toast({
+          title: "Generating proof 🧑‍💻",
+          description: "Please wait while we generate the proof",
+        });
+        setTxStatus("proof");
         const proof = await barretenbergBackend.generateProof(witness);
 
         console.log("Proof:", proof);
-        // const isValid = await barretenbergBackend.verifyProof(proof);
-        // console.log("Is valid:", isValid);
+        setTxStatus("success");
+        toast({
+          title: "Congratulations 🎉",
+          description: "Proof generated successfully",
+        });
+        setProof(proof);
+        console.log("verify");
+        const isValid = await barretenbergBackend.verifyProof(proof);
+        console.log("Is valid:", isValid);
       } catch (signError) {
         console.error("Error signing message:", signError);
+        setTxStatus("initial");
+        toast({
+          title: "Error 🚨",
+          description: "An error occurred while generating the proof",
+        });
       }
     } catch (error) {
+      setTxStatus("initial");
       console.error("Error processing image:", error);
     }
   };
@@ -128,6 +179,7 @@ function UploadImageContainer() {
             >
               Click or Drop here
             </button>
+
             {imageList.map((image, index) => (
               <img
                 className="w-[200px] h-[200px]"
@@ -136,8 +188,18 @@ function UploadImageContainer() {
               />
             ))}
             {images.length > 0 && (
-              <Button onClick={verifyImage} className="w-full">
-                Verify Image 🔒
+              <Button
+                disabled={txStatus !== "initial" && txStatus !== "success"}
+                onClick={
+                  txStatus === "initial"
+                    ? verifyImage
+                    : txStatus === "success"
+                    ? copyProof
+                    : () => {}
+                }
+                className="w-full"
+              >
+                {getButtonText()}
               </Button>
             )}
           </div>
