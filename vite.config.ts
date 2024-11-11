@@ -38,7 +38,7 @@ export default defineConfig(({ command }) => {
         react(),
         copy({
           targets: [
-            { src: "node_modules/*/.wasm", dest: "node_modules/.vite/dist" },
+            { src: "node_modules/**/*.wasm", dest: "node_modules/.vite/dist" },
           ],
           copySync: true,
           hook: "buildStart",

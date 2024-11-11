@@ -7,7 +7,8 @@ export class Hasher {
 
     public async hashData(): Promise<number[]> {
         const hashBuffer = await crypto.subtle.digest('SHA-256', this.data);
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        return hashArray;
+        const hashArray = new Uint8Array(hashBuffer);
+        const binaryString = Array.from(hashArray, byte => byte.toString(2).padStart(8, '0')).join('');
+        return binaryString.split("").map(Number);         
     }
 }
