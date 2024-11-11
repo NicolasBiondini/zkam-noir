@@ -28,7 +28,6 @@ export class ImageHashProcessor {
             const hashBit = hash[i];
             newImageData[pixelIndex] = hashBit === 0 ? 254 : 255;
         }
-
         return newImageData;
     }
 
@@ -40,7 +39,6 @@ export class ImageHashProcessor {
             const hashBit = this.image[pixelIndex] === 254 ? 0 : 1;
             hash.push(hashBit);
         }
-
         return hash;
     }
 }
