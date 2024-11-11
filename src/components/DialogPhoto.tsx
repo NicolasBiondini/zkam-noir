@@ -12,8 +12,9 @@ import React, { useState } from "react";
 import { Button } from "./ui/button";
 import { cn } from "@/lib/utils";
 import { useAccount, useSignMessage } from "wagmi";
-import { generateRandomNumbers } from "@/helpers/random";
-import { generateHash, processImage } from "@/helpers/generateImage";
+import { RandInt } from "@/helpers/RandInt";
+import { ImageHashProcessor } from "@/helpers/ImageHashProcessor";
+import { Hasher } from "@/helpers/Hasher";
 
 function DialogPhoto({
   isOpen,
@@ -38,23 +39,25 @@ function DialogPhoto({
       { account: address, message: address },
       {
         onSuccess(data) {
-          setSign(data);
-          generateRandomNumbers(sign)
-            .then((randomNumbers) => {
+          try {
+            async function getNewImageAsync() {
+              setSign(data);
+              const decimalNumber = BigInt(data).toString();
+              const seed = Number(decimalNumber.slice(0, 8));
+              const randomNumbers = new RandInt(256, 0, 10000, seed).generate();
               if (!photoData) return;
-              console.log(
-                "primera imagen hash: ",
-                generateHash(photoData, randomNumbers)
-              );
-              console.log(randomNumbers);
-              // TODO: add algo to change image
-              const newPhoto = processImage(photoData, randomNumbers);
-              console.log("segunda imagen hash: ", generateHash(newPhoto, []));
-              setNewPhotoData(newPhoto);
+              const hash = await new Hasher(photoData).hashData();
+              const modifiedImage = new ImageHashProcessor(photoData, randomNumbers).getModifiedImage(hash);
+              setNewPhotoData(modifiedImage);
               setIsLoading(false);
               setIsConfirmed(true);
-            })
-            .catch((err) => console.log("error: ", err));
+            }
+            getNewImageAsync();
+          } catch (error) {
+            console.log(error);
+            setIsLoading(false);
+          }
+          
         },
         onError(error) {
           console.log(error);

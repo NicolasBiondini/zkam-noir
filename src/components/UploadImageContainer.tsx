@@ -3,8 +3,8 @@ import { useState } from "react";
 import ImageUploading, { ImageListType } from "react-images-uploading";
 import { Button } from "./ui/button";
 import { useAccount, useSignMessage } from "wagmi";
-import { generateRandomNumbers } from "@/helpers/random";
-import { generateHash } from "@/helpers/generateImage";
+import { RandInt } from "@/helpers/RandInt";
+import { ImageHashProcessor } from "@/helpers/ImageHashProcessor";
 import circuit from "@/../circuits/target/circuits.json";
 import { CompiledCircuit, Noir } from "@noir-lang/noir_js";
 import { BarretenbergBackend } from "@noir-lang/backend_barretenberg";
@@ -69,25 +69,18 @@ function UploadImageContainer() {
 
         console.log("Signature obtained:", signature);
 
-        const randomNumbers = await generateRandomNumbers(signature);
+        const decimalNumber = BigInt(signature).toString();
+        const seed = Number(decimalNumber.slice(0, 8));
+        const randomNumbers = new RandInt(256, 0, 10000, seed).generate();
         console.log("Random numbers:", randomNumbers);
-        const hash = generateHash(imageData.data, randomNumbers);
-        console.log("Hash:", hash);
 
-        // Convertir el hash string a array binario
-        const hashBinary = hash
-          .split("")
-          .map((char) => {
-            // Convertir cada carácter a su representación binaria
-            const binary = parseInt(char, 16).toString(2).padStart(4, "0");
-            return binary.split("").map((bit) => parseInt(bit));
-          })
-          .flat();
+        const hash = new ImageHashProcessor(imageData.data, randomNumbers).extractHashFromImage();
+        console.log("Hash:", hash);
 
         const input = {
           image: Array.from(imageData.data),
           hash_indexes: randomNumbers,
-          hash_to_check: hashBinary, // Ahora usamos el array binario
+          hash_to_check: hash, // Ahora usamos el array binario
         };
         console.log("Input:", input);
 
