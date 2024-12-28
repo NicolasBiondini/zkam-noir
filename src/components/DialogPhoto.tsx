@@ -44,10 +44,12 @@ function DialogPhoto({
               setSign(data);
               const decimalNumber = BigInt(data).toString();
               const seed = Number(decimalNumber.slice(0, 8));
-              const randomNumbers = new RandInt(256, 0, 10000, seed).generate();
+              const randomNumbers = new RandInt(256, 0, 1023, seed).generate();
               if (!photoData) return;
               const hash = await new Hasher(photoData).hashData();
+              console.log("hash", hash);
               const modifiedImage = new ImageHashProcessor(photoData, randomNumbers).getModifiedImage(hash);
+              console.log("modifiedImage", modifiedImage);
               setNewPhotoData(modifiedImage);
               setIsLoading(false);
               setIsConfirmed(true);
@@ -67,19 +69,20 @@ function DialogPhoto({
     );
   };
 
-  const handleDownload = () => {
-    const width = 100;
-    const height = 100;
+  const handleDownload = (tipo:string) => {
+    const width = 32;
+    const height = 32;
 
     // Create canvas
     const canvas = document.createElement("canvas");
     canvas.width = width;
     canvas.height = height;
     const context = canvas.getContext("2d");
+    const imageToDownload = tipo === "original" ? photoData : newPhotoData;
     if (!context) return;
 
-    if (!newPhotoData) return;
-    const imgData = new ImageData(newPhotoData, width, height);
+    if (!imageToDownload) return;
+    const imgData = new ImageData(imageToDownload, width, height);
 
     context.putImageData(imgData, 0, 0);
 
@@ -89,12 +92,12 @@ function DialogPhoto({
     // Create download link
     const link = document.createElement("a");
     link.href = dataUrl;
-    link.download = "imagen.png";
+    link.download = `imagen_${tipo}.png`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    setIsConfirmed(false);
-    setIsOpen(false);
+    // setIsConfirmed(false);
+    // setIsOpen(false);
   };
 
   return (
@@ -147,11 +150,19 @@ function DialogPhoto({
               className="border border-black w-[300px] h-[300px]"
             />
           </div>
-          <div className="w-full flex flex-row gap-2 justify-between items-center">
+          <div className="w-full flex flex-col gap-2 justify-between items-center">
             {isConfirmed ? (
-              <Button className="w-full" onClick={handleDownload}>
-                Download 🎉
+              <>
+              <p className=" text-gray-400 text-sm">You can download the original and the signed image</p>
+              <div className="flex flex-row gap-2 w-full">
+              <Button className="w-full" onClick={() => handleDownload("original")}>
+                Original
               </Button>
+              <Button className="w-full" onClick={() => handleDownload("modified")}>
+                Modified 🔒
+            </Button>
+            </div>
+            </>
             ) : (
               <>
                 {" "}
