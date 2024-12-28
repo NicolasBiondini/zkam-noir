@@ -14,8 +14,28 @@ function UploadImageContainer() {
   const { address } = useAccount();
   const { signMessageAsync } = useSignMessage();
   const [images, setImages] = useState<ImageListType>([]);
+  const [txStatus, setTxStatus] = useState<
+    "initial" | "signing" | "witness" | "proof" | "success" | "error"
+  >("initial");
+  const { proof: stateProof, setProof } = useAppState();
+
   const maxNumber = 1;
 
+  const { toast } = useToast();
+
+  const copyProof = () => {
+    navigator.clipboard.writeText(JSON.stringify(stateProof));
+    toast({
+      title: "Proof copied 📄",
+      description: "The proof has been copied to your clipboard",
+    });
+  };
+
+  const getButtonText = () => {
+    if (txStatus === "initial") return "Verify Image 🔒";
+    if (txStatus === "success") return "Copy Proof 📄";
+    return "Pending";
+  };
   const onChange = (imageList: ImageListType) => {
     if (imageList.length > 0) {
       const img = new Image();
@@ -35,7 +55,7 @@ function UploadImageContainer() {
 
   const verifyImage = async () => {
     if (!images.length || !address) return;
-
+    setTxStatus("signing");
     try {
       // Crear un canvas de 100x100
       const canvas = document.createElement("canvas");
@@ -117,8 +137,14 @@ function UploadImageContainer() {
         // console.log("Is valid:", isValid);
       } catch (signError) {
         console.error("Error signing message:", signError);
+        setTxStatus("initial");
+        toast({
+          title: "Error 🚨",
+          description: "An error occurred while generating the proof",
+        });
       }
     } catch (error) {
+      setTxStatus("initial");
       console.error("Error processing image:", error);
     }
   };
@@ -156,6 +182,7 @@ function UploadImageContainer() {
             >
               Click or Drop here
             </button>
+
             {imageList.map((image, index) => (
               <img
                 className="w-[200px] h-[200px]"
@@ -164,8 +191,18 @@ function UploadImageContainer() {
               />
             ))}
             {images.length > 0 && (
-              <Button onClick={verifyImage} className="w-full">
-                Verify Image 🔒
+              <Button
+                disabled={txStatus !== "initial" && txStatus !== "success"}
+                onClick={
+                  txStatus === "initial"
+                    ? verifyImage
+                    : txStatus === "success"
+                    ? copyProof
+                    : () => {}
+                }
+                className="w-full"
+              >
+                {getButtonText()}
               </Button>
             )}
           </div>

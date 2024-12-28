@@ -22,6 +22,7 @@ const wasmContentTypePlugin = {
 
 export default defineConfig(({ command }) => {
   if (command === "serve") {
+    console.log("serve hereeee");
     return {
       build: {
         target: "esnext",
@@ -38,7 +39,10 @@ export default defineConfig(({ command }) => {
         react(),
         copy({
           targets: [
-            { src: "node_modules/**/*.wasm", dest: "node_modules/.vite/dist" },
+            {
+              src: "node_modules/**/*.wasm",
+              dest: "node_modules/.vite/dist",
+            },
           ],
           copySync: true,
           hook: "buildStart",

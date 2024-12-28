@@ -22,4 +22,7 @@ export const useAppState = create<AppState>()((set) => ({
   setSign: (sign) => {
     set((state) => ({ ...state, sign }));
   },
+  setProof: (proof) => {
+    set((state) => ({ ...state, proof }));
+  },
 }));
