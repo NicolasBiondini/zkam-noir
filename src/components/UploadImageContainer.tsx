@@ -8,6 +8,7 @@ import { ImageHashProcessor } from "@/helpers/ImageHashProcessor";
 import circuit from "@/../circuits/target/circuits.json";
 import { CompiledCircuit, Noir } from "@noir-lang/noir_js";
 import { BarretenbergBackend } from "@noir-lang/backend_barretenberg";
+import { ToastContainer, toast, Bounce } from 'react-toastify';
 
 function UploadImageContainer() {
   const { address } = useAccount();
@@ -49,9 +50,9 @@ function UploadImageContainer() {
       const loadImagePromise = new Promise<ImageData>((resolve, reject) => {
         const img = new Image();
         img.onload = () => {
-          ctx.clearRect(0, 0, 100, 100);
-          ctx.drawImage(img, 0, 0, 100, 100);
-          const imageData = ctx.getImageData(0, 0, 100, 100);
+          ctx.clearRect(0, 0, 32, 32);
+          ctx.drawImage(img, 0, 0, 32, 32);
+          const imageData = ctx.getImageData(0, 0, 32, 32);
           resolve(imageData);
         };
         img.onerror = reject;
@@ -59,22 +60,35 @@ function UploadImageContainer() {
       });
 
       const imageData = await loadImagePromise;
-      console.log("Bytes length:", imageData.data.length);
 
       try {
         // Usar signMessageAsync directamente
-        const signature = await signMessageAsync({
+        const signature = signMessageAsync({
           message: address,
         });
 
-        console.log("Signature obtained:", signature);
+        toast.promise(signature, {
+          pending: 'Signing message...',
+          success: 'Message signed 🎉',
+          error: 'Error signing message 😢',
+        });
 
-        const decimalNumber = BigInt(signature).toString();
+        const decimalNumber = BigInt(await signature).toString();
         const seed = Number(decimalNumber.slice(0, 8));
-        const randomNumbers = new RandInt(256, 0, 10000, seed).generate();
+        const randomNumbers = new RandInt(256, 0, 1023, seed).generate();
         console.log("Random numbers:", randomNumbers);
 
-        const hash = new ImageHashProcessor(imageData.data, randomNumbers).extractHashFromImage();
+        // take hash into a promise resolve after one second
+        const hashPromise = new Promise<number[]>((resolve) => {
+          const hash = new ImageHashProcessor(imageData.data, randomNumbers).extractHashFromImage();
+          resolve(hash);
+        });
+        // const hash = new ImageHashProcessor(imageData.data, randomNumbers).extractHashFromImage();
+        const hash = await toast.promise(hashPromise, {
+          pending: 'Extracting hash from image...',
+          success: 'Hash extracted 🎉',
+          error: 'Error getting hash 😢',
+        });
         console.log("Hash:", hash);
 
         const input = {
@@ -86,18 +100,19 @@ function UploadImageContainer() {
 
         const noir = new Noir(circuit as CompiledCircuit);
 
-        noir.init();
-        const { witness } = await noir.execute(input);
+        // noir.init();
+        const {witness} = await noir.execute(input);
+        toast.success("Witness generated 🎉");
 
         console.log("Witness:", witness);
 
-        const barretenbergBackend = new BarretenbergBackend(
-          circuit as CompiledCircuit,
-          { threads: navigator.hardwareConcurrency }
-        );
-        const proof = await barretenbergBackend.generateProof(witness);
+        // const barretenbergBackend = new BarretenbergBackend(
+        //   circuit as CompiledCircuit,
+        //   { threads: navigator.hardwareConcurrency }
+        // );
+        // const proof = await barretenbergBackend.generateProof(witness);
 
-        console.log("Proof:", proof);
+        // console.log("Proof:", proof);
         // const isValid = await barretenbergBackend.verifyProof(proof);
         // console.log("Is valid:", isValid);
       } catch (signError) {
@@ -110,6 +125,19 @@ function UploadImageContainer() {
 
   return (
     <div className="w-full h-full">
+      <ToastContainer
+        position="bottom-right"
+        autoClose={5000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick={false}
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="dark"
+        transition={Bounce}
+      />
       <ImageUploading
         value={images}
         onChange={onChange}
